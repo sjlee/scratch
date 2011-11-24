@@ -1,6 +1,5 @@
 package org.sjlee.data;
 
-
 public class BinarySearchTree<T extends Comparable<? super T>> {
 
 	private Node<T> root;
@@ -118,6 +117,40 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		return (node.right == null) ? node : findMaxNode(node.right);
 	}
 	
+	public T findOrderedValue(int n) {
+		TraversalResult<T> result = new TraversalResult<T>();
+		traverse(root, n, result);
+		if (result.count == n && result.value != null) {
+			return result.value;
+		}
+		return null;
+	}
+	
+	// DFS traversal
+	private void traverse(Node<T> node, int n, TraversalResult<T> result) {
+		if (node == null) {
+			return;
+		}
+		if (result.count == n) { // it's already solved; break
+			return;
+		}
+		traverse(node.left, n, result);
+		if (result.count == n) { // it's solved by one of the recursive calls; break
+			return;
+		}
+		result.count++; // increment for this result
+		if (result.count == n) { // I am it
+			result.value = node.element;
+			return;
+		}
+		traverse(node.right, n, result);
+	}
+	
+	private static class TraversalResult<T> {
+		int count;
+		T value;
+	}
+	
 	private void printInOrder(Node<T> entry) {
 		if (entry != null) {
 			printInOrder(entry.left);
@@ -168,7 +201,7 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		BinarySearchTree<Test> tree = BinarySearchTree.createTestTree();
 		int size = 20;
 
-		for (int i = 0; i <= size; i++) {
+		for (int i = 1; i <= size; i++) {
 			tree.insert(new Test1(String.valueOf(i)));
 		}
 
@@ -180,6 +213,11 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		System.out.println("Contains (10) : " + tree.contains(new Test1("10")));
 		System.out.println("Contains (11) : "
 				+ tree.contains(new Test1(String.valueOf(11))));
+		// see if we can print them in order
+		for (int i = 1; i <= size-2; i++) {
+			Test value = tree.findOrderedValue(i);
+			System.out.println(value.value);
+		}
 	}
 
 }
