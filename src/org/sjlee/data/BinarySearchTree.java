@@ -16,21 +16,7 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		if (root == null) {
 			return false;
 		}
-		return contains(root, value);
-	}
-	
-	private boolean contains(Node<T> node, T value) {
-		T element = node.element;
-		if (element.compareTo(value) == 0) {
-			return true; // match
-		}
-		if (element.compareTo(value) > 0) { // left
-			// search the left subtree
-			return (node.left == null) ? false : contains(node.left, value);
-		} else { // right
-			// search the right subtree
-			return (node.right == null) ? false : contains(node.right, value);
-		}
+		return root.contains(value);
 	}
 	
 	public boolean insert(T value) {
@@ -38,29 +24,7 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 			root = new Node<T>(value);
 			return true;
 		}
-		return insert(root, value);
-	}
-	
-	private boolean insert(Node<T> node, T value) {
-		T element = node.element;
-		if (element.compareTo(value) == 0) {
-			return false; // already exists
-		}
-		if (element.compareTo(value) > 0) { // left
-			if (node.left == null) {
-				node.left = new Node<T>(value);
-				return true;
-			} else {
-				return insert(node.left, value);
-			}
-		} else { // right
-			if (node.right == null) {
-				node.right = new Node<T>(value);
-				return true;
-			} else {
-				return insert(node.right, value);
-			}
-		}
+		return root.insert(value);
 	}
 	
 	public boolean remove(T value) {
@@ -71,79 +35,24 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 			// use a dummy node to handle swap
 			Node<T> fauxNode = new Node<T>(value);
 			fauxNode.left = root;
-			boolean result = remove(root, value, fauxNode);
+			boolean result = root.remove(value, fauxNode);
 			root = fauxNode.left;
 			return result;
 		} else {
-			return remove(root, value, null);
+			return root.remove(value, null);
 		}
-	}
-	
-	private boolean remove(Node<T> node, T value, Node<T> parent) {
-		T element = node.element;
-		if (element.compareTo(value) > 0) { // left
-			return (node.left == null) ? false : remove(node.left, value, node);
-		} else if (element.compareTo(value) < 0) { // right
-			return (node.right == null) ? false : remove(node.right, value, node);
-		} else { // found the node
-			if (node.left != null && node.right != null) { // both children exist
-				node.element = findInOrderSuccessor(node).element;
-				// remove the redundant node
-				remove(node.right, value, node);
-			} else if (node == parent.left) { // I am left child
-				parent.left = (node.left == null) ? node.right : node.left;
-			} else if (node == parent.right) { // I am right child
-				parent.right = (node.left == null) ? node.right : node.left;
-			}
-			return true;
-		}
-	}
-		
-	private Node<T> findInOrderSuccessor(Node<T> node) {
-		return findMinNode(node.right);
-	}
-	
-	private Node<T> findMinNode(Node<T> node) {
-		if (node == null) {
-			return null;
-		}
-		return (node.left == null) ? node : findMinNode(node.left);
-	}
-	
-	private Node<T> findMaxNode(Node<T> node) {
-		if (node == null) {
-			return null;
-		}
-		return (node.right == null) ? node : findMaxNode(node.right);
 	}
 	
 	public T findOrderedValue(int n) {
 		TraversalResult<T> result = new TraversalResult<T>();
-		traverse(root, n, result);
+		if (root == null) {
+			return null;
+		}
+		root.traverse(n, result);
 		if (result.count == n && result.value != null) {
 			return result.value;
 		}
 		return null;
-	}
-	
-	// DFS traversal
-	private void traverse(Node<T> node, int n, TraversalResult<T> result) {
-		if (node == null) {
-			return;
-		}
-		if (result.count == n) { // it's already solved; break
-			return;
-		}
-		traverse(node.left, n, result);
-		if (result.count == n) { // it's solved by one of the recursive calls; break
-			return;
-		}
-		result.count++; // increment for this result
-		if (result.count == n) { // I am it
-			result.value = node.element;
-			return;
-		}
-		traverse(node.right, n, result);
 	}
 	
 	private static class TraversalResult<T> {
@@ -151,16 +60,10 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		T value;
 	}
 	
-	private void printInOrder(Node<T> entry) {
-		if (entry != null) {
-			printInOrder(entry.left);
-			System.out.println(entry.element);
-			printInOrder(entry.right);
-		}
-	}
-
 	public void printInOrder() {
-		printInOrder(root);
+		if (root != null) {
+			root.printInOrder();
+		}
 	}
 
 	private static class Node<T extends Comparable<? super T>> {
@@ -171,6 +74,105 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		Node(T theElement) {
 			element = theElement;
 			left = right = null;
+		}
+		
+		boolean contains(T value) {
+			if (element.compareTo(value) == 0) {
+				return true; // match
+			}
+			if (element.compareTo(value) > 0) { // left
+				// search the left subtree
+				return (left == null) ? false : left.contains(value);
+			} else { // right
+				// search the right subtree
+				return (right == null) ? false : right.contains(value);
+			}
+		}
+		
+		boolean insert(T value) {
+			if (element.compareTo(value) == 0) {
+				return false; // already exists
+			}
+			if (element.compareTo(value) > 0) { // left
+				if (left == null) {
+					left = new Node<T>(value);
+					return true;
+				} else {
+					return left.insert(value);
+				}
+			} else { // right
+				if (right == null) {
+					right = new Node<T>(value);
+					return true;
+				} else {
+					return right.insert(value);
+				}
+			}
+		}
+		
+		boolean remove(T value, Node<T> parent) {
+			if (element.compareTo(value) > 0) { // left
+				return (left == null) ? false : left.remove(value, this);
+			} else if (element.compareTo(value) < 0) { // right
+				return (right == null) ? false : right.remove(value, this);
+			} else { // found the node
+				if (left != null && right != null) { // both children exist
+					element = findInOrderSuccessor().element;
+					// remove the redundant node
+					right.remove(value, this);
+				} else if (this == parent.left) { // I am left child
+					parent.left = (left == null) ? right : left;
+				} else if (this == parent.right) { // I am right child
+					parent.right = (left == null) ? right : left;
+				}
+				return true;
+			}
+		}
+		
+		private Node<T> findInOrderSuccessor() {
+			if (right == null) {
+				return null; // shouldn't be called if right is null
+			}
+			return right.findMinNode();
+		}
+		
+		private Node<T> findMinNode() {
+			return (left == null) ? this : left.findMinNode();
+		}
+		
+		private Node<T> findMaxNode() {
+			return (right == null) ? this : right.findMaxNode();
+		}
+		
+		// DFS traversal
+		void traverse(int n, TraversalResult<T> result) {
+			if (result.count == n) { // it's already solved; break
+				return;
+			}
+			if (left != null) {
+				left.traverse(n, result);
+			}
+			if (result.count == n) { // it's solved by one of the recursive calls; break
+				return;
+			}
+			result.count++; // increment for this result
+			if (result.count == n) { // I am it
+				result.value = element;
+				return;
+			}
+			if (right != null) {
+				right.traverse(n, result);
+			}
+		}
+		
+		void printInOrder() {
+			if (left != null) {
+				left.printInOrder();
+			}
+			System.out.println(element);
+			if (right != null) {
+				right.printInOrder();
+			}
 		}
 	}
 
