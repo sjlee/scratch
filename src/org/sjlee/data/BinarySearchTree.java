@@ -60,6 +60,13 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		T value;
 	}
 	
+	public boolean isBinarySearchTree() {
+		if (root == null) { // if it is empty, it's "trivially" a BST
+			return true;
+		}
+		return root.isBinarySearchTree();
+	}
+	
 	public void printInOrder() {
 		if (root != null) {
 			root.printInOrder();
@@ -174,6 +181,18 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 				right.printInOrder();
 			}
 		}
+		
+		boolean isBinarySearchTree() {
+			if (left != null && 
+					(element.compareTo(left.element) <= 0 || !left.isBinarySearchTree())) {
+				return false;
+			}
+			if (right != null &&
+					(element.compareTo(right.element) >= 0 || !right.isBinarySearchTree())) {
+				return false;
+			}
+			return true;
+		}
 	}
 
 	private static class Test implements Comparable<Test> {
@@ -207,10 +226,25 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 			tree.insert(new Test1(String.valueOf(i)));
 		}
 
+		if (!tree.isBinarySearchTree()) {
+			System.err.println("it's not a binary search tree?");
+		}
 		tree.insert(new Test1("100"));
+		if (!tree.isBinarySearchTree()) {
+			System.err.println("it's not a binary search tree?");
+		}
 		tree.remove(new Test1("10"));
+		if (!tree.isBinarySearchTree()) {
+			System.err.println("it's not a binary search tree?");
+		}
 		tree.remove(new Test1(String.valueOf(15)));
+		if (!tree.isBinarySearchTree()) {
+			System.err.println("it's not a binary search tree?");
+		}
 		tree.remove(new Test1(String.valueOf(20)));
+		if (!tree.isBinarySearchTree()) {
+			System.err.println("it's not a binary search tree?");
+		}
 		tree.printInOrder();
 		System.out.println("Contains (10) : " + tree.contains(new Test1("10")));
 		System.out.println("Contains (11) : "
