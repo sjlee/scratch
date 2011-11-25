@@ -2,11 +2,12 @@ package org.sjlee.data;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Stack;
 
 public class Trie {
 	private final Node root = new Node();
 	
-	public void insert(String word) {
+	public void add(String word) {
 		int size = word.length();
 		Node parent = root;
 		for (int i = 0; i < size; i++) {
@@ -125,10 +126,10 @@ public class Trie {
 	
 	public static void main(String[] args) {
 		Trie trie = new Trie();
-		trie.insert("4084061578");
-		trie.insert("4082396092");
-		trie.insert("4083765464");
-		trie.insert("4083761234");
+		trie.add("4084061578");
+		trie.add("4082396092");
+		trie.add("4083765464");
+		trie.add("4083761234");
 		
 		boolean check = trie.find("4083765464");
 		if (!check) {
