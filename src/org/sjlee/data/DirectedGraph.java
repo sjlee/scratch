@@ -1,5 +1,6 @@
 package org.sjlee.data;
 
+import java.util.Deque;
 import java.util.EmptyStackException;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -116,7 +117,6 @@ public class DirectedGraph {
 	
 	private void addToPath(Vertex v, DoublyLinkedList<Vertex> path) {
 		path.add(v);
-		
 	}
 	
 	private void editPath(DoublyLinkedList<Vertex> path, int startIndex) {
@@ -139,6 +139,65 @@ public class DirectedGraph {
 				}
 			}
 		}
+	}
+	
+	private static class Score {
+		public static final int NO_PREDECESSOR = -1;
+		int score = Integer.MAX_VALUE;
+		int predecessor = NO_PREDECESSOR; // initial invalid value
+		boolean completed;
+		
+		static Score[] getScoreArray(int size, int start) {
+			Score[] scores = new Score[size];
+			for (int i = 0; i < size; i++) {
+				scores[i] = new Score();
+				if (i == start) {
+					scores[i].score = 0;
+				}
+			}
+			return scores;
+		}
+		
+		@Override
+		public String toString() {
+			return score == Integer.MAX_VALUE ? "unset" : score + ": (from " + predecessor + ")";
+		}
+	}
+
+	// Dijkstra's method
+	public Queue<Vertex> findShortestPath(int startIndex, int endIndex) {
+		Queue<Integer> unvisited = new LinkedList<Integer>();
+		// initialize the scores
+		Score[] scores = Score.getScoreArray(vertices.length, startIndex);
+		
+		Integer i = startIndex;
+		// examine the immediate neighbors of the vertex
+		do {
+			for (int j = 0; j < vertices.length; j++) {
+				int weight = edges[i][j];
+				if (weight != 0) {
+					int score = weight + scores[i].score; // compute the core for the neighbor
+					Score neighbor = scores[j];
+					// reset the score if it is lower
+					if (score < neighbor.score) {
+						neighbor.score = score;
+						neighbor.predecessor = i;
+					}
+					if (!neighbor.completed && !unvisited.contains(j)) {
+						// add to the set only if it is not completed
+						unvisited.add(j);
+					}
+				}
+			}
+			// mark the parent as completed
+			scores[i].completed = true;
+		} while ((i = unvisited.poll()) != null);
+		// we should have all scores filled in: find the shortest path for end
+		Deque<Vertex> path = new LinkedList<Vertex>();
+		for (int k = endIndex; k != Score.NO_PREDECESSOR; k = scores[k].predecessor) {
+			path.addFirst(vertices[k]);
+		}
+		return path;
 	}
 	
 	public void resetVisited() {
@@ -216,5 +275,21 @@ public class DirectedGraph {
 		graph.resetVisited();
 		DoublyLinkedList<Vertex> path = graph.findPathDF(1, 3);
 		System.out.println(path);
+		
+		// test Dijkstra's algorithm
+		String[] keys2 = {"A", "B", "C", "D", "E", "F", "G"};
+		int[][] edges2 = {
+				{0, 10, 9, 25, 0, 0, 0},
+				{0, 0, 0, 0, 14, 0, 0},
+				{0, 0, 0, 0, 12, 0, 0},
+				{0, 0, 0, 0, 0, 0, 14},
+				{0, 0, 0, 0, 0, 8, 0},
+				{0, 0, 0, 0, 0, 0, 6},
+				{0, 0, 0, 0, 0, 0, 0}
+		};
+		
+		DirectedGraph graph2 = new DirectedGraph(keys2, edges2);
+		Queue<Vertex> path2 = graph2.findShortestPath(0, 6);
+		System.out.println(path2);
 	}
 }
