@@ -1,7 +1,9 @@
 package org.sjlee.data;
 
+import java.util.EmptyStackException;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Stack;
 
 public class DirectedGraph {
 	private Vertex[] vertices;
@@ -44,6 +46,32 @@ public class DirectedGraph {
 			}
 		} while ((current = queue.poll()) != null); // dequeue and loop
 		System.out.println("breadth-first traversal complete.");
+	}
+	
+	public void traverseDF() {
+		Stack<Vertex> stack = new Stack<Vertex>();
+		Vertex current = vertices[0];
+		int index;
+		do {
+			index = current.getIndex();
+			System.out.println("vertex " + current + " visited.");
+			current.setVisited();
+			// push the neighbors
+			for (int i = 0; i < vertices.length; i++) {
+				if (edges[index][i] != 0) {
+					Vertex neighbor = vertices[i];
+					if (!neighbor.isVisited()) {
+						stack.push(neighbor);
+					}
+				}
+			}
+			try {
+				current = stack.pop(); // pop a vertex; if it is empty we'll handle it as an exception
+			} catch (EmptyStackException e) {
+				break;
+			}
+		} while (true);
+		System.out.println("depth-first traversal complete.");
 	}
 	
 	public void resetVisited() {
@@ -116,5 +144,7 @@ public class DirectedGraph {
 		DirectedGraph graph = new DirectedGraph(keys, edges);
 		System.out.println(graph);
 		graph.traverseBF();
+		graph.resetVisited();
+		graph.traverseDF();
 	}
 }
