@@ -1,6 +1,6 @@
 package org.sjlee.data;
 
-public class SingleLinkedList<T> {
+public class SinglyLinkedList<T> {
 	private Node<T> head = null;
 	
 	public T getHead() {
@@ -90,7 +90,7 @@ public class SingleLinkedList<T> {
 	}
 	
 	public static void main(String[] args) {
-		SingleLinkedList<Integer> list = new SingleLinkedList<Integer>();
+		SinglyLinkedList<Integer> list = new SinglyLinkedList<Integer>();
 		list.add(0);
 		list.add(1);
 		list.add(1);
