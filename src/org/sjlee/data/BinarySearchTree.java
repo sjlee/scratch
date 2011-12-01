@@ -8,6 +8,23 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 		root = null;
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (!(obj instanceof BinarySearchTree)) {
+			return false;
+		}
+		BinarySearchTree<T> that = (BinarySearchTree<T>)obj;
+		return nodeEqualsWithNull(root, that.root);
+	}
+	
+	
+	private static boolean nodeEqualsWithNull(Node<?> n1, Node<?> n2) {
+		return (n1 == null && n2 == null) || n1.equals(n2);
+	}
+	
 	public static <T extends Comparable<? super T>> BinarySearchTree<T> createTestTree() {
 		return new BinarySearchTree<T>();
 	}
@@ -83,6 +100,26 @@ public class BinarySearchTree<T extends Comparable<? super T>> {
 			left = right = null;
 		}
 		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (!(obj instanceof Node)) {
+				return false;
+			}
+			Node<T> that = (Node<T>)obj;
+			return elementEqualsWithNull(that.element) && 
+					nodeEqualsWithNull(left, that.left) && nodeEqualsWithNull(right, that.right);
+		}
+		
+		private boolean elementEqualsWithNull(T that) {
+			if (element == null) {
+				return that == null;
+			}
+			return element.equals(that);
+		}
+
 		boolean contains(T value) {
 			if (element.compareTo(value) == 0) {
 				return true; // match
