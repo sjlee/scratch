@@ -51,5 +51,12 @@ public class ExcelToNumber {
 		System.out.println(numberToExcel(27));
 		System.out.println(numberToExcel(28));
 		System.out.println(numberToExcel(53));
+		// just one more
+		String from = "FRE";
+		String to = numberToExcel(excelToNumber(from));
+		System.out.println(from + " <-> " + to);
+		if (!to.equals(from)) {
+			System.err.println("wrong!");
+		}
 	}
 }
