@@ -1,6 +1,7 @@
 package org.sjlee.alg;
 
 
+
 public class ExcelToNumber {
 	// a -> 1, b -> 2, ... aa -> 27, ...
 	public static final int UNIT = 26;
