@@ -1,0 +1,191 @@
+From c54c5e95820efde951c5f9d4a45b123311bfbfaa Mon Sep 17 00:00:00 2001
+From: Sangjin Lee <sjlee@apache.org>
+Date: Fri, 14 Mar 2025 16:08:13 -0700
+Subject: [PATCH] HADOOP-19488. Fix creating the temp directory on Windows
+
+Creating the temp directory was failing on Windows because it does not recognize POSIX permissions. Handling it differently for Windows filesystems.
+---
+ .../java/org/apache/hadoop/util/RunJar.java   | 99 +++++++++++++++++--
+ .../org/apache/hadoop/util/TestRunJar.java    | 16 +++
+ 2 files changed, 105 insertions(+), 10 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/RunJar.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/RunJar.java
+index e527f602cdd31..2336f08eeed83 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/RunJar.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/RunJar.java
+@@ -27,12 +27,15 @@
+ import java.net.MalformedURLException;
+ import java.net.URL;
+ import java.net.URLClassLoader;
++import java.nio.file.FileSystems;
+ import java.nio.file.Files;
++import java.nio.file.attribute.AclEntry;
+ import java.nio.file.attribute.FileAttribute;
+-import java.nio.file.attribute.PosixFilePermission;
+ import java.nio.file.attribute.PosixFilePermissions;
++import java.nio.file.attribute.UserPrincipal;
+ import java.util.ArrayList;
+ import java.util.Arrays;
++import java.util.Collections;
+ import java.util.Enumeration;
+ import java.util.List;
+ import java.util.Set;
+@@ -51,6 +54,23 @@
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+ 
++import static java.nio.file.attribute.AclEntryFlag.DIRECTORY_INHERIT;
++import static java.nio.file.attribute.AclEntryFlag.FILE_INHERIT;
++import static java.nio.file.attribute.AclEntryPermission.APPEND_DATA;
++import static java.nio.file.attribute.AclEntryPermission.DELETE;
++import static java.nio.file.attribute.AclEntryPermission.DELETE_CHILD;
++import static java.nio.file.attribute.AclEntryPermission.EXECUTE;
++import static java.nio.file.attribute.AclEntryPermission.READ_ACL;
++import static java.nio.file.attribute.AclEntryPermission.READ_ATTRIBUTES;
++import static java.nio.file.attribute.AclEntryPermission.READ_DATA;
++import static java.nio.file.attribute.AclEntryPermission.READ_NAMED_ATTRS;
++import static java.nio.file.attribute.AclEntryPermission.SYNCHRONIZE;
++import static java.nio.file.attribute.AclEntryPermission.WRITE_ACL;
++import static java.nio.file.attribute.AclEntryPermission.WRITE_ATTRIBUTES;
++import static java.nio.file.attribute.AclEntryPermission.WRITE_NAMED_ATTRS;
++import static java.nio.file.attribute.AclEntryPermission.WRITE_OWNER;
++import static java.nio.file.attribute.AclEntryType.ALLOW;
++
+ /** Run a Hadoop job jar. */
+ @InterfaceAudience.Private
+ @InterfaceStability.Unstable
+@@ -286,25 +306,19 @@ public void run(String[] args) throws Throwable {
+     }
+     mainClassName = mainClassName.replaceAll("/", ".");
+ 
+-    File tmpDir = new File(System.getProperty("java.io.tmpdir"));
+-    ensureDirectory(tmpDir);
+-
+     final File workDir;
+     try {
+-      FileAttribute<Set<PosixFilePermission>> perms = PosixFilePermissions
+-          .asFileAttribute(PosixFilePermissions.fromString("rwx------"));
+-      workDir = Files.createTempDirectory(tmpDir.toPath(), "hadoop-unjar", perms).toFile();
++      workDir = createWorkDirectory();
+     } catch (IOException | SecurityException e) {
+       // If user has insufficient perms to write to tmpDir, default
+       // "Permission denied" message doesn't specify a filename.
+       System.err.println("Error creating temp dir in java.io.tmpdir "
+-                         + tmpDir + " due to " + e.getMessage());
++                         + System.getProperty("java.io.tmpdir") + " due to "
++                         + e.getMessage());
+       System.exit(-1);
+       return;
+     }
+ 
+-    ensureDirectory(workDir);
+-
+     ShutdownHookManager.get().addShutdownHook(
+         new Runnable() {
+           @Override
+@@ -333,6 +347,71 @@ public void run() {
+     }
+   }
+ 
++  static File createWorkDirectory() throws IOException {
++    File tmpDir = new File(System.getProperty("java.io.tmpdir"));
++    ensureDirectory(tmpDir);
++
++    File workDir = Files.createTempDirectory(tmpDir.toPath(), "hadoop-unjar",
++        directoryPermissions()).toFile();
++    ensureDirectory(workDir);
++    return workDir;
++  }
++
++  private static FileAttribute<?> directoryPermissions() throws IOException {
++    Set<String> views = FileSystems.getDefault().supportedFileAttributeViews();
++    if (views.contains("posix")) {
++      System.out.println("we're dealing with a posix filesystem: " + FileSystems.getDefault());
++      return PosixFilePermissions
++          .asFileAttribute(PosixFilePermissions.fromString("rwx------"));
++    } else if (views.contains("acl")) {
++      System.out.println("we're dealing with an ACL-based filesystem: " + FileSystems.getDefault());
++      return userOnly();
++    } else {
++      throw new IOException("unrecognized FileSystem type " +
++          FileSystems.getDefault());
++    }
++  }
++
++  private static FileAttribute<?> userOnly() throws IOException {
++    UserPrincipal user =
++        FileSystems.getDefault()
++            .getUserPrincipalLookupService()
++            .lookupPrincipalByName(System.getProperty("user.name"));
++    System.out.println("user: " + user.toString());
++    List<AclEntry> acl =
++        Collections.singletonList(AclEntry.newBuilder()
++            .setType(ALLOW)
++            .setPrincipal(user)
++            .setPermissions(
++                APPEND_DATA,
++                DELETE,
++                DELETE_CHILD,
++                EXECUTE,
++                READ_ACL,
++                READ_ATTRIBUTES,
++                READ_DATA,
++                READ_NAMED_ATTRS,
++                SYNCHRONIZE,
++                WRITE_ACL,
++                WRITE_ATTRIBUTES,
++                WRITE_NAMED_ATTRS,
++                WRITE_OWNER)
++            .setFlags(DIRECTORY_INHERIT, FILE_INHERIT)
++            .build());
++    return
++        new FileAttribute<List<AclEntry>>() {
++          @Override
++          public String name() {
++            return "acl:acl";
++          }
++
++          @Override
++          public List<AclEntry> value() {
++            return acl;
++          }
++        };
++  }
++
+   /**
+    * Creates a classloader based on the environment that was specified by the
+    * user. If HADOOP_USE_CLIENT_CLASSLOADER is specified, it creates an
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/util/TestRunJar.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/util/TestRunJar.java
+index 7b1e031360a19..e8bec0199dace 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/util/TestRunJar.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/util/TestRunJar.java
+@@ -20,6 +20,7 @@
+ import static org.apache.hadoop.util.RunJar.MATCH_ANY;
+ import static org.junit.jupiter.api.Assertions.assertEquals;
+ import static org.junit.jupiter.api.Assertions.assertFalse;
++import static org.junit.jupiter.api.Assertions.assertNotNull;
+ import static org.junit.jupiter.api.Assertions.assertTrue;
+ import static org.junit.jupiter.api.Assertions.fail;
+ import static org.mockito.ArgumentMatchers.any;
+@@ -190,6 +191,21 @@ public void testUnJarDoesNotLooseLastModify() throws Exception {
+         failureMessage);
+   }
+ 
++  @Test
++  public void testCreateWorkDirectory() throws Exception {
++    File workDir = null;
++    try {
++      workDir = RunJar.createWorkDirectory();
++      System.out.println("location of workDir: " + workDir);
++
++      assertNotNull(workDir, "work directory should exist and not null");
++    } finally {
++      if (workDir != null) {
++        FileUtil.fullyDelete(workDir);
++      }
++    }
++  }
++
+   private File getUnjarDir(String dirName) {
+     File unjarDir = new File(TEST_ROOT_DIR, dirName);
+     assertFalse(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
