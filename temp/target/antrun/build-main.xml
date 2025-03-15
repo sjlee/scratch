@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-antrun-" default="main"  >
+<target name="main">
+  <delete dir="/Users/sjlee/hadoop/hadoop-common-project/hadoop-common/target/test/data"/>
+  <mkdir dir="/Users/sjlee/hadoop/hadoop-common-project/hadoop-common/target/test/data"/>
+  <mkdir dir="/Users/sjlee/hadoop/hadoop-common-project/hadoop-common/target/log"/>
+  <copy toDir="/Users/sjlee/hadoop/hadoop-common-project/hadoop-common/target/test-classes">
+    <fileset dir="/Users/sjlee/hadoop/hadoop-common-project/hadoop-common/src/main/conf"/>
+  </copy>
+</target>
+</project>
